@@ -13,6 +13,7 @@ from time import sleep
 from . import color_print
 import websockets.exceptions
 from datetime import datetime, time
+import os
 
 
 class Stream:
@@ -30,6 +31,9 @@ class Stream:
         self._queue = []  # a queue of requests to be sent
         self.active = False
         self._client = client  # so we can get streamer info
+        self.thisdate = datetime.now().strftime('%Y%m%d')
+        home_dir = os.path.expanduser('~/')
+        self.md_file = home_dir + f'md/md_{self.thisdate}.log'
 
     async def _start_streamer(self, receiver_func="default"):
         """
@@ -60,16 +64,23 @@ class Stream:
                     print("Connected.")
                     login_payload = self.basic_request(service="ADMIN", command="LOGIN", parameters={"Authorization": self._client.access_token, "SchwabClientChannel": self._streamer_info.get("schwabClientChannel"), "SchwabClientFunctionId": self._streamer_info.get("schwabClientFunctionId")})
                     await self._websocket.send(json.dumps(login_payload))
-                    receiver_func(await self._websocket.recv())
+                    #receiver_func(await self._websocket.recv())
+                    with open(self.md_file, 'a') as f:
+                        f.write(await self._websocket.recv() + '\n')
                     self.active = True
                     # send queued requests
                     while self._queue:
                         await self._websocket.send(json.dumps({"requests": self._queue.pop(0)}))
-                        receiver_func(await self._websocket.recv())
+                        #receiver_func(await self._websocket.recv())
+                        with open(self.md_file, 'a') as f:
+                            f.write(await self._websocket.recv() + '\n')
                     # TODO: send logout request atexit (when the program closes)
                     # TODO: resend requests if the stream crashes
                     while True:
-                        receiver_func(await self._websocket.recv())
+                        #receiver_func(await self._websocket.recv())
+                        with open(self.md_file, 'a') as f:
+                            f.write(await self._websocket.recv() + '\n')
+
             except Exception as e:
                 self.active = False
                 if e is websockets.exceptions.ConnectionClosedOK or str(e) == "received 1000 (OK); then sent 1000 (OK)":
@@ -82,6 +93,7 @@ class Stream:
                 else:
                     color_print.error(f"{e}")
                     color_print.warning("Connection lost to server, reconnecting...")
+
 
     def start(self, receiver="default"):
         """
