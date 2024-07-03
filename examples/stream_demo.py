@@ -43,11 +43,11 @@ def main():
         # these three do the same thing
         # client.stream.send(client.stream.basic_request("LEVELONE_EQUITIES", "ADD", parameters={"keys": "AMD,INTC", "fields": "0,1,2,3,4,5,6,7,8"}))
         # client.stream.send(client.stream.level_one_equities("AMD,INTC", "0,1,2,3,4,5,6,7,8"), command="ADD")
-        #client.stream.send(client.stream.level_one_equities("SPY", "0,1,2,3,4,5,6,7,8"))
+        client.stream.send(client.stream.level_one_equities("SPY", "0,1,2,3,4,5,6,7,8,9,16,34,35,37,38,39,40,41"))
 
         # client.stream.send(client.stream.level_one_options("keys", "0,1,2,3,4,5,6,7,8"))
 
-        client.stream.send(client.stream.level_one_futures("/ES", "0,1,2,3,4,5,6"))
+        #client.stream.send(client.stream.level_one_futures("/ES", "0,1,2,3,4,5,6"))
 
         # client.stream.send(client.stream.level_one_futures_options("keys", "0,1,2,3,4,5"))
 
@@ -71,7 +71,7 @@ def main():
 
         # stop the stream after 60 seconds (since this is a demo
         import time
-        time.sleep(36000)
+        time.sleep(42000)
         client.stream.stop()
     except KeyboardInterrupt :
         print('stopping ...')
