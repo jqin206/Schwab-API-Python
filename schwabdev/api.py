@@ -6,6 +6,7 @@ import urllib.parse
 from . import color_print
 from .stream import Stream
 from datetime import datetime
+import zmq
 
 
 class Client:
@@ -48,6 +49,12 @@ class Client:
         self.timeout = timeout
         self._verbose = verbose             # verbose mode
         self.stream = Stream(self)          # init the streaming object
+
+        # start zeromq pub
+        self.context = zmq.Context()
+        self.server_socket = self.context.socket(zmq.PUB)
+        self.server_socket.connect('tcp://localhost:5559')
+        #self.server_socket.bind('tcp://*:5559')
 
         # Try to load tokens from the tokens file
         at_issued, rt_issued, token_dictionary = self._read_tokens_file()
@@ -127,6 +134,10 @@ class Client:
                 self._access_token_issued = datetime.now()
                 self._refresh_token_issued = refresh_token_issued
                 new_td = response.json()
+
+                # published to zmq
+                self.server_socket.send_json(json.dumps({"status": "key","orderId":"", "content" : new_td}))
+
                 self.access_token = new_td.get("access_token")
                 self.refresh_token = new_td.get("refresh_token")
                 self.id_token = new_td.get("id_token")

@@ -14,6 +14,7 @@ from . import color_print
 import websockets.exceptions
 from datetime import datetime, time
 import os
+import zmq
 
 
 class Stream:
@@ -34,6 +35,12 @@ class Stream:
         self.thisdate = datetime.now().strftime('%Y%m%d')
         home_dir = os.path.expanduser('~/')
         self.md_file = home_dir + f'md/md_{self.thisdate}.log'
+
+        # start zeromq pub
+        self.context = zmq.Context()
+        self.server_socket = self.context.socket(zmq.PUB)
+        self.server_socket.connect('tcp://localhost:5559')
+        #self.server_socket.bind('tcp://*:5559')
 
     async def _start_streamer(self, receiver_func="default"):
         """
@@ -65,21 +72,31 @@ class Stream:
                     login_payload = self.basic_request(service="ADMIN", command="LOGIN", parameters={"Authorization": self._client.access_token, "SchwabClientChannel": self._streamer_info.get("schwabClientChannel"), "SchwabClientFunctionId": self._streamer_info.get("schwabClientFunctionId")})
                     await self._websocket.send(json.dumps(login_payload))
                     #receiver_func(await self._websocket.recv())
+                    stream_msg = await self._websocket.recv() 
+                    #self.server_socket.send_string(stream_msg)
+                    self.server_socket.send_json(stream_msg)
                     with open(self.md_file, 'a') as f:
-                        f.write(await self._websocket.recv() + '\n')
+                        #f.write(await self._websocket.recv() + '\n')
+                        f.write(stream_msg + '\n')
                     self.active = True
                     # send queued requests
                     while self._queue:
                         await self._websocket.send(json.dumps({"requests": self._queue.pop(0)}))
                         #receiver_func(await self._websocket.recv())
+                        stream_msg = await self._websocket.recv() 
+                        self.server_socket.send_json(stream_msg)
                         with open(self.md_file, 'a') as f:
-                            f.write(await self._websocket.recv() + '\n')
+                            #f.write(await self._websocket.recv() + '\n')
+                            f.write(stream_msg + '\n')
+
                     # TODO: send logout request atexit (when the program closes)
                     # TODO: resend requests if the stream crashes
                     while True:
+                        stream_msg = await self._websocket.recv() 
+                        self.server_socket.send_json(stream_msg)
                         #receiver_func(await self._websocket.recv())
                         with open(self.md_file, 'a') as f:
-                            f.write(await self._websocket.recv() + '\n')
+                            f.write(stream_msg + '\n')
 
             except Exception as e:
                 self.active = False
@@ -89,7 +106,8 @@ class Stream:
                 elif (datetime.now() - self._start_timestamp).seconds < 60:
                     color_print.error(f"{e}")
                     color_print.error("Stream not alive for more than 1 minute, exiting...")
-                    break
+                    #break
+                    sleep(60)
                 else:
                     color_print.error(f"{e}")
                     color_print.warning("Connection lost to server, reconnecting...")

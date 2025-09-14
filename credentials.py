@@ -1,0 +1,5 @@
+appKey = 'cvyj70hHNnAJT4cPHr3X8XtreodYG9zU'
+appSecret = '2Mh5QoGGZ0dBleAU'
+callbackUrl = 'https://127.0.0.1'
+#accountNumber = '90095255'
+accountNumber = '73254427'
